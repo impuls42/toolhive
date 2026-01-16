@@ -353,6 +353,8 @@ func WithOIDCConfig(
 				IntrospectionURL:  oidcIntrospectionURL,
 				ClientID:          oidcClientID,
 				ClientSecret:      oidcClientSecret,
+				CACertPath:        thvCABundle,
+				AuthTokenFile:     jwksAuthTokenFile,
 				AllowPrivateIP:    jwksAllowPrivateIP,
 				InsecureAllowHTTP: insecureAllowHTTP,
 				Scopes:            scopes,
