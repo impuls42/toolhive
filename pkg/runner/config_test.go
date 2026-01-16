@@ -767,6 +767,8 @@ func TestRunConfigBuilder(t *testing.T) {
 	oidcAudience := "test-audience"
 	oidcJwksURL := "https://issuer.example.com/.well-known/jwks.json"
 	oidcClientID := "test-client"
+	oidcCABundlePath := "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	oidcAuthTokenFile := "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	k8sPodPatch := `{"spec":{"containers":[{"name":"test","resources":{"limits":{"memory":"512Mi"}}}]}}`
 	envVarValidator := &mockEnvVarValidator{}
 
@@ -790,7 +792,7 @@ func TestRunConfigBuilder(t *testing.T) {
 		WithAuditEnabled(false, ""),
 		WithLabels(nil),
 		WithGroup(""),
-		WithOIDCConfig(oidcIssuer, oidcAudience, oidcJwksURL, "", oidcClientID, "", "", "", "", false, false, nil),
+		WithOIDCConfig(oidcIssuer, oidcAudience, oidcJwksURL, "", oidcClientID, "", oidcCABundlePath, oidcAuthTokenFile, "", false, false, nil),
 		WithTelemetryConfigFromFlags("", false, false, false, "", 0.1, nil, false, nil),
 		WithToolsFilter(nil),
 		WithIgnoreConfig(&ignore.Config{
@@ -831,6 +833,8 @@ func TestRunConfigBuilder(t *testing.T) {
 	assert.Equal(t, oidcAudience, config.OIDCConfig.Audience, "OIDCConfig.Audience should match")
 	assert.Equal(t, oidcJwksURL, config.OIDCConfig.JWKSURL, "OIDCConfig.JWKSURL should match")
 	assert.Equal(t, oidcClientID, config.OIDCConfig.ClientID, "OIDCConfig.ClientID should match")
+	assert.Equal(t, oidcCABundlePath, config.OIDCConfig.CACertPath, "OIDCConfig.CACertPath should match")
+	assert.Equal(t, oidcAuthTokenFile, config.OIDCConfig.AuthTokenFile, "OIDCConfig.AuthTokenFile should match")
 
 	// Check that user args override registry defaults (metadata args should not be present)
 	assert.NotContains(t, config.CmdArgs, "--metadata-arg", "User args should override registry defaults")
