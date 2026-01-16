@@ -93,7 +93,7 @@ jobs:
       - name: Run E2E tests (${{ matrix.title }})
         env:
           THV_BINARY: ${{ github.workspace }}/bin/thv
-          TOOLHIVE_EGRESS_IMAGE: ghcr.io/stacklok/toolhive/egress-proxy:latest
+          TOOLHIVE_EGRESS_IMAGE: ghcr.io/${{ github.repository }}/egress-proxy:latest
           TEST_TIMEOUT: 15m
           LABEL_FILTER: ${{ matrix.label_filter }}
         run: ./test/e2e/run_tests.sh

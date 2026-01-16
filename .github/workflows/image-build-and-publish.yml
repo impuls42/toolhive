@@ -13,7 +13,7 @@ jobs:
       id-token: write
 
     env:
-      BASE_REPO: "ghcr.io/stacklok/toolhive"
+      BASE_REPO: "ghcr.io/${{ github.repository }}"
 
     steps:
       - name: Checkout repository
@@ -57,7 +57,7 @@ jobs:
           fi
 
           KO_DOCKER_REPO=$BASE_REPO ko build --platform=linux/amd64,linux/arm64 --bare $TAGS ./cmd/thv \
-            --image-label=org.opencontainers.image.source=https://github.com/stacklok/toolhive,org.opencontainers.image.title="toolhive",org.opencontainers.image.vendor=Stacklok
+            --image-label=org.opencontainers.image.source=https://github.com/${{ github.repository }},org.opencontainers.image.title="toolhive",org.opencontainers.image.vendor=${{ github.repository_owner }}
 
       - name: Sign Image with Cosign
         # This step uses the identity token to provision an ephemeral certificate
@@ -81,7 +81,7 @@ jobs:
       id-token: write
 
     env:
-      BASE_REPO: "ghcr.io/stacklok/toolhive/egress-proxy"
+      BASE_REPO: "ghcr.io/${{ github.repository }}/egress-proxy"
 
     steps:
       - name: Checkout repository
@@ -119,9 +119,9 @@ jobs:
           push: ${{ startsWith(github.ref, 'refs/tags/') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
-            org.opencontainers.image.source=https://github.com/stacklok/toolhive
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.title=toolhive-egress-proxy
-            org.opencontainers.image.vendor=Stacklok
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
 
       - name: Install Cosign
         if: startsWith(github.ref, 'refs/tags/')
@@ -143,7 +143,7 @@ jobs:
       id-token: write
 
     env:
-      BASE_REPO: "ghcr.io/stacklok/toolhive/operator"
+      BASE_REPO: "ghcr.io/${{ github.repository }}/operator"
 
     steps:
       - name: Checkout repository
@@ -190,8 +190,8 @@ jobs:
             type=raw,value=latest-ubi,enable=${{ startsWith(github.ref, 'refs/tags/') }}
           labels: |
             name=toolhive-operator
-            vendor=Stacklok
-            maintainer=Stacklok
+            vendor=${{ github.repository_owner }}
+            maintainer=${{ github.repository_owner }}
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
@@ -212,7 +212,7 @@ jobs:
           fi
 
           KO_DOCKER_REPO=$BASE_REPO ko build --platform=linux/amd64,linux/arm64 --bare $TAGS ./cmd/thv-operator \
-            --image-label=org.opencontainers.image.source=https://github.com/stacklok/toolhive,org.opencontainers.image.title="toolhive-operator",org.opencontainers.image.vendor=Stacklok
+            --image-label=org.opencontainers.image.source=https://github.com/${{ github.repository }},org.opencontainers.image.title="toolhive-operator",org.opencontainers.image.vendor=${{ github.repository_owner }}
 
       - name: Build and Push UBI Image to GHCR
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
@@ -253,7 +253,7 @@ jobs:
       id-token: write
 
     env:
-      BASE_REPO: "ghcr.io/stacklok/toolhive/proxyrunner"
+      BASE_REPO: "ghcr.io/${{ github.repository }}/proxyrunner"
 
     steps:
       - name: Checkout repository
@@ -291,8 +291,8 @@ jobs:
             type=raw,value=latest-ubi,enable=${{ startsWith(github.ref, 'refs/tags/') }}
           labels: |
             name=toolhive-proxyrunner
-            vendor=Stacklok
-            maintainer=Stacklok
+            vendor=${{ github.repository_owner }}
+            maintainer=${{ github.repository_owner }}
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
@@ -311,7 +311,7 @@ jobs:
             TAGS="$TAGS -t latest"
           fi
           KO_DOCKER_REPO=$BASE_REPO ko build --platform=linux/amd64,linux/arm64 --bare $TAGS ./cmd/thv-proxyrunner \
-            --image-label=org.opencontainers.image.source=https://github.com/stacklok/toolhive,org.opencontainers.image.title="toolhive-proxyrunner",org.opencontainers.image.vendor=Stacklok
+            --image-label=org.opencontainers.image.source=https://github.com/${{ github.repository }},org.opencontainers.image.title="toolhive-proxyrunner",org.opencontainers.image.vendor=${{ github.repository_owner }}
 
       - name: Build and Push UBI Image to GHCR
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
@@ -352,7 +352,7 @@ jobs:
       id-token: write
 
     env:
-      BASE_REPO: "ghcr.io/stacklok/toolhive/vmcp"
+      BASE_REPO: "ghcr.io/${{ github.repository }}/vmcp"
 
     steps:
       - name: Checkout repository
@@ -408,7 +408,7 @@ jobs:
           fi
 
           KO_DOCKER_REPO=$BASE_REPO ko build --platform=linux/amd64,linux/arm64 --bare $TAGS ./cmd/vmcp \
-            --image-label=org.opencontainers.image.source=https://github.com/stacklok/toolhive,org.opencontainers.image.title="toolhive-vmcp",org.opencontainers.image.vendor=Stacklok
+            --image-label=org.opencontainers.image.source=https://github.com/${{ github.repository }},org.opencontainers.image.title="toolhive-vmcp",org.opencontainers.image.vendor=${{ github.repository_owner }}
 
       - name: Sign Image with Cosign
         # This step uses the identity token to provision an ephemeral certificate
