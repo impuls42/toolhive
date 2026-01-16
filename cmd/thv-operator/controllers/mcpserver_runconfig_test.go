@@ -408,10 +408,8 @@ func TestCreateRunConfigFromMCPServer(t *testing.T) {
 				assert.Equal(t, "https://auth.example.com/oauth/introspect", config.OIDCConfig.IntrospectionURL)
 				assert.Equal(t, "toolhive-client", config.OIDCConfig.ClientID)
 				assert.Equal(t, "secret123", config.OIDCConfig.ClientSecret)
-				// NOTE: CACertPath and AuthTokenFile are not currently mapped in WithOIDCConfig function
-				// This is likely a bug that should be fixed separately
-				assert.Equal(t, "", config.OIDCConfig.CACertPath)
-				assert.Equal(t, "", config.OIDCConfig.AuthTokenFile)
+				assert.Equal(t, "/etc/ssl/ca-bundle.pem", config.OIDCConfig.CACertPath)
+				assert.Equal(t, "/etc/auth/token", config.OIDCConfig.AuthTokenFile)
 				assert.True(t, config.OIDCConfig.AllowPrivateIP)
 			},
 		},
@@ -812,9 +810,8 @@ func TestEnsureRunConfigConfigMap(t *testing.T) {
 				assert.Equal(t, "https://auth.example.com/oauth/introspect", runConfig.OIDCConfig.IntrospectionURL)
 				assert.Equal(t, "toolhive-client", runConfig.OIDCConfig.ClientID)
 				assert.Equal(t, "secret123", runConfig.OIDCConfig.ClientSecret)
-				// NOTE: CACertPath and AuthTokenFile are not currently mapped in WithOIDCConfig function
-				assert.Equal(t, "", runConfig.OIDCConfig.CACertPath)
-				assert.Equal(t, "", runConfig.OIDCConfig.AuthTokenFile)
+				assert.Equal(t, "/etc/ssl/ca-bundle.pem", runConfig.OIDCConfig.CACertPath)
+				assert.Equal(t, "/etc/auth/token", runConfig.OIDCConfig.AuthTokenFile)
 				assert.True(t, runConfig.OIDCConfig.AllowPrivateIP)
 			},
 		},
