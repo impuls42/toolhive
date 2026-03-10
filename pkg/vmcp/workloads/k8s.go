@@ -21,6 +21,7 @@ import (
 	transporttypes "github.com/stacklok/toolhive/pkg/transport/types"
 	"github.com/stacklok/toolhive/pkg/vmcp"
 	"github.com/stacklok/toolhive/pkg/vmcp/auth/converters"
+	authtypes "github.com/stacklok/toolhive/pkg/vmcp/auth/types"
 	"github.com/stacklok/toolhive/pkg/workloads/types"
 )
 
@@ -291,14 +292,33 @@ func (d *k8sDiscoverer) mcpServerToBackend(ctx context.Context, mcpServer *mcpv1
 //   - Returns nil error if auth config is discovered and successfully populated into backend
 //   - Returns error if auth config exists but discovery/resolution fails (e.g., missing secret, invalid config)
 func (d *k8sDiscoverer) discoverAuthConfig(ctx context.Context, mcpServer *mcpv1alpha1.MCPServer, backend *vmcp.Backend) error {
-	return d.discoverAuthConfigFromRef(
+	if err := d.discoverAuthConfigFromRef(
 		ctx,
 		mcpServer.Spec.ExternalAuthConfigRef,
 		mcpServer.Namespace,
 		mcpServer.Name,
 		"MCPServer",
 		backend,
-	)
+	); err != nil {
+		return err
+	}
+
+	// Fallback: If no ExternalAuthConfigRef is set, but OIDCConfig is present,
+	// default to passthrough strategy since the server requires OIDC.
+	if backend.AuthConfig == nil && mcpServer.Spec.OIDCConfig != nil &&
+		mcpServer.Spec.OIDCConfig.Type == "inline" && mcpServer.Spec.OIDCConfig.Inline != nil &&
+		mcpServer.Spec.OIDCConfig.Inline.Issuer != "" {
+		slog.Debug("OIDC config detected on MCPServer, defaulting to passthrough",
+			"server", mcpServer.Name)
+		backend.AuthConfig = &authtypes.BackendAuthStrategy{
+			Type: authtypes.StrategyTypePassthrough,
+			Passthrough: &authtypes.PassthroughConfig{
+				HeaderName: "Authorization",
+			},
+		}
+	}
+
+	return nil
 }
 
 // discoverAuthConfigFromRef is a helper that discovers and populates authentication configuration
@@ -462,14 +482,33 @@ func (d *k8sDiscoverer) discoverRemoteProxyAuthConfig(
 	proxy *mcpv1alpha1.MCPRemoteProxy,
 	backend *vmcp.Backend,
 ) error {
-	return d.discoverAuthConfigFromRef(
+	if err := d.discoverAuthConfigFromRef(
 		ctx,
 		proxy.Spec.ExternalAuthConfigRef,
 		proxy.Namespace,
 		proxy.Name,
 		"MCPRemoteProxy",
 		backend,
-	)
+	); err != nil {
+		return err
+	}
+
+	// Fallback: If no ExternalAuthConfigRef is set, but OIDCConfig is present,
+	// default to passthrough strategy since the backend requires OIDC.
+	// This ensures that VirtualMCPServer knows it should pass through the JWT.
+	if backend.AuthConfig == nil && proxy.Spec.OIDCConfig.Type == "inline" &&
+		proxy.Spec.OIDCConfig.Inline != nil && proxy.Spec.OIDCConfig.Inline.Issuer != "" {
+		slog.Debug("OIDC config detected on remote proxy, defaulting to passthrough",
+			"proxy", proxy.Name)
+		backend.AuthConfig = &authtypes.BackendAuthStrategy{
+			Type: authtypes.StrategyTypePassthrough,
+			Passthrough: &authtypes.PassthroughConfig{
+				HeaderName: "Authorization",
+			},
+		}
+	}
+
+	return nil
 }
 
 // isStandardK8sAnnotation checks if an annotation key is a standard Kubernetes annotation.

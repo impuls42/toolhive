@@ -73,6 +73,8 @@ func NewRegistry() *Registry {
 	r.Register(mcpv1alpha1.ExternalAuthTypeTokenExchange, &TokenExchangeConverter{})
 	r.Register(mcpv1alpha1.ExternalAuthTypeHeaderInjection, &HeaderInjectionConverter{})
 	r.Register(mcpv1alpha1.ExternalAuthTypeUnauthenticated, &UnauthenticatedConverter{})
+	// No ExternalAuthType for passthrough yet, but we use it internally for OIDC discovery
+	// r.Register("passthrough", &PassthroughConverter{})
 
 	return r
 }

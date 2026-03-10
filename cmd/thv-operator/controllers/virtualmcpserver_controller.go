@@ -1633,6 +1633,12 @@ func (r *VirtualMCPServerReconciler) buildOutgoingAuthConfig(
 		Backends: make(map[string]*authtypes.BackendAuthStrategy),
 	}
 
+	// Set system token environment variable name if system token ref is specified.
+	// The actual token is mounted as this environment variable in the deployment.
+	if vmcp.Spec.OutgoingAuth != nil && vmcp.Spec.OutgoingAuth.SystemTokenRef != nil {
+		outgoing.SystemTokenEnv = "VMCP_SYSTEM_TOKEN"
+	}
+
 	// Collect all auth config errors (non-fatal)
 	var allAuthErrors []AuthConfigError
 

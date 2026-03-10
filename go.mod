@@ -1,6 +1,11 @@
 module github.com/stacklok/toolhive
 
-go 1.26
+go 1.25.6
+
+replace (
+	github.com/stacklok/toolhive-catalog => ./op_local/toolhive-catalog
+	github.com/stacklok/toolhive-core => ./op_local/toolhive-core
+)
 
 require (
 	dario.cat/mergo v1.0.2

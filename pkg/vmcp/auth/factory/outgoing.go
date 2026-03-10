@@ -38,6 +38,7 @@ import (
 // Parameters:
 //   - ctx: Context for any initialization that requires it
 //   - envReader: Environment variable reader for dependency injection
+//   - systemToken: Optional system token for fallback authentication (empty if not configured)
 //
 // Returns:
 //   - auth.OutgoingAuthRegistry: Registry with all strategies registered
@@ -45,6 +46,7 @@ import (
 func NewOutgoingAuthRegistry(
 	_ context.Context,
 	envReader env.Reader,
+	systemToken string,
 ) (auth.OutgoingAuthRegistry, error) {
 	registry := auth.NewDefaultOutgoingAuthRegistry()
 
@@ -64,6 +66,12 @@ func NewOutgoingAuthRegistry(
 	if err := registry.RegisterStrategy(
 		authtypes.StrategyTypeTokenExchange,
 		strategies.NewTokenExchangeStrategy(envReader),
+	); err != nil {
+		return nil, err
+	}
+	if err := registry.RegisterStrategy(
+		authtypes.StrategyTypePassthrough,
+		strategies.NewPassthroughStrategy(systemToken),
 	); err != nil {
 		return nil, err
 	}

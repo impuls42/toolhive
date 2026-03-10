@@ -281,6 +281,12 @@ type OutgoingAuthConfig struct {
 
 	// Backends contains per-backend auth configuration.
 	Backends map[string]*authtypes.BackendAuthStrategy `json:"backends,omitempty" yaml:"backends,omitempty"`
+
+	// SystemTokenEnv is the name of the environment variable containing a long-lived
+	// token used by vMCP for background operations like health checks when no client
+	// token is available. The actual token value is resolved at runtime.
+	// +optional
+	SystemTokenEnv string `json:"systemTokenEnv,omitempty" yaml:"systemTokenEnv,omitempty"`
 }
 
 // ResolveForBackend returns the auth strategy for a given backend ID.

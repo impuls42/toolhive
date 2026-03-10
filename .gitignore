@@ -46,3 +46,5 @@ coverage*
 crd-helm-wrapper
 cmd/vmcp/__debug_bin*
 /vmcp
+
+.opencode/auth.json

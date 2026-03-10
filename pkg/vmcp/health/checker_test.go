@@ -14,7 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"github.com/stacklok/toolhive/pkg/auth"
 	"github.com/stacklok/toolhive/pkg/vmcp"
+	authtypes "github.com/stacklok/toolhive/pkg/vmcp/auth/types"
 	"github.com/stacklok/toolhive/pkg/vmcp/mocks"
 )
 
@@ -44,7 +46,7 @@ func TestNewHealthChecker(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			checker := NewHealthChecker(mockClient, tt.timeout, 0)
+			checker := NewHealthChecker(mockClient, tt.timeout, 0, "")
 			require.NotNil(t, checker)
 
 			// Type assert to access internals for verification
@@ -68,7 +70,41 @@ func TestHealthChecker_CheckHealth_Success(t *testing.T) {
 		Return(&vmcp.CapabilityList{}, nil).
 		Times(1)
 
-	checker := NewHealthChecker(mockClient, 5*time.Second, 0)
+	checker := NewHealthChecker(mockClient, 5*time.Second, 0, "")
+	target := &vmcp.BackendTarget{
+		WorkloadID:   "backend-1",
+		WorkloadName: "test-backend",
+		BaseURL:      "http://localhost:8080",
+	}
+
+	status, err := checker.CheckHealth(context.Background(), target)
+	assert.NoError(t, err)
+	assert.Equal(t, vmcp.BackendHealthy, status)
+}
+
+func TestHealthChecker_CheckHealth_SystemToken(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	systemToken := "test-system-token"
+	mockClient := mocks.NewMockBackendClient(ctrl)
+	mockClient.EXPECT().
+		ListCapabilities(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, _ *vmcp.BackendTarget) (*vmcp.CapabilityList, error) {
+			identity, ok := auth.IdentityFromContext(ctx)
+			if !ok {
+				return nil, fmt.Errorf("no identity found")
+			}
+			if identity.Token != systemToken {
+				return nil, fmt.Errorf("wrong token: %s", identity.Token)
+			}
+			return &vmcp.CapabilityList{}, nil
+		}).
+		Times(1)
+
+	checker := NewHealthChecker(mockClient, 5*time.Second, 0, systemToken)
 	target := &vmcp.BackendTarget{
 		WorkloadID:   "backend-1",
 		WorkloadName: "test-backend",
@@ -95,7 +131,7 @@ func TestHealthChecker_CheckHealth_ContextCancellation(t *testing.T) {
 		}).
 		Times(1)
 
-	checker := NewHealthChecker(mockClient, 100*time.Millisecond, 0)
+	checker := NewHealthChecker(mockClient, 100*time.Millisecond, 0, "")
 	target := &vmcp.BackendTarget{
 		WorkloadID:   "backend-1",
 		WorkloadName: "test-backend",
@@ -123,7 +159,7 @@ func TestHealthChecker_CheckHealth_NoTimeout(t *testing.T) {
 		Times(1)
 
 	// Create checker with no timeout
-	checker := NewHealthChecker(mockClient, 0, 0)
+	checker := NewHealthChecker(mockClient, 0, 0, "")
 	target := &vmcp.BackendTarget{
 		WorkloadID:   "backend-1",
 		WorkloadName: "test-backend",
@@ -213,7 +249,7 @@ func TestHealthChecker_CheckHealth_ErrorCategorization(t *testing.T) {
 				Return(nil, tt.err).
 				Times(1)
 
-			checker := NewHealthChecker(mockClient, 5*time.Second, 0)
+			checker := NewHealthChecker(mockClient, 5*time.Second, 0, "")
 			target := &vmcp.BackendTarget{
 				WorkloadID:   "backend-1",
 				WorkloadName: "test-backend",
@@ -430,7 +466,7 @@ func TestHealthChecker_CheckHealth_Timeout(t *testing.T) {
 		}).
 		Times(1)
 
-	checker := NewHealthChecker(mockClient, 100*time.Millisecond, 0)
+	checker := NewHealthChecker(mockClient, 100*time.Millisecond, 0, "")
 	target := &vmcp.BackendTarget{
 		WorkloadID:   "backend-1",
 		WorkloadName: "test-backend",
@@ -467,7 +503,7 @@ func TestHealthChecker_CheckHealth_MultipleBackends(t *testing.T) {
 		}).
 		Times(4)
 
-	checker := NewHealthChecker(mockClient, 5*time.Second, 0)
+	checker := NewHealthChecker(mockClient, 5*time.Second, 0, "")
 
 	// Test healthy backend
 	status, err := checker.CheckHealth(context.Background(), &vmcp.BackendTarget{
@@ -504,4 +540,52 @@ func TestHealthChecker_CheckHealth_MultipleBackends(t *testing.T) {
 	})
 	assert.Error(t, err)
 	assert.Equal(t, vmcp.BackendUnhealthy, status)
+}
+
+func TestHealthChecker_CheckHealth_SystemToken_OverridesAuthStrategy(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	systemToken := "test-system-token"
+	mockClient := mocks.NewMockBackendClient(ctrl)
+
+	// We expect ListCapabilities to be called with a modified target
+	mockClient.EXPECT().
+		ListCapabilities(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, target *vmcp.BackendTarget) (*vmcp.CapabilityList, error) {
+			// Verify that the auth config was overridden to Passthrough
+			if target.AuthConfig == nil {
+				return nil, assert.AnError
+			}
+			assert.Equal(t, authtypes.StrategyTypePassthrough, target.AuthConfig.Type, "Auth strategy should be overridden to Passthrough")
+			assert.NotNil(t, target.AuthConfig.Passthrough, "Passthrough config should be present")
+			assert.Equal(t, "Authorization", target.AuthConfig.Passthrough.HeaderName, "Header name should be Authorization")
+			return &vmcp.CapabilityList{}, nil
+		}).
+		Times(1)
+
+	checker := NewHealthChecker(mockClient, 5*time.Second, 0, systemToken)
+
+	// Create a target with a different auth strategy (e.g., TokenExchange)
+	originalAuthConfig := &authtypes.BackendAuthStrategy{
+		Type: authtypes.StrategyTypeTokenExchange,
+		TokenExchange: &authtypes.TokenExchangeConfig{
+			TokenURL: "http://example.com/token",
+		},
+	}
+	target := &vmcp.BackendTarget{
+		WorkloadID:   "backend-1",
+		WorkloadName: "test-backend",
+		BaseURL:      "http://localhost:8080",
+		AuthConfig:   originalAuthConfig,
+	}
+
+	status, err := checker.CheckHealth(context.Background(), target)
+	assert.NoError(t, err)
+	assert.Equal(t, vmcp.BackendHealthy, status)
+
+	// Verify the original target was NOT modified
+	assert.Equal(t, authtypes.StrategyTypeTokenExchange, target.AuthConfig.Type, "Original target auth strategy should not be modified")
 }

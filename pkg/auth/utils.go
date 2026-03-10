@@ -9,9 +9,16 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"os"
 	"os/user"
 	"strings"
 )
+
+// SystemTokenEnvVar is the name of the environment variable that holds the system token.
+// If this environment variable is set, the authentication middleware will accept
+// a Bearer token matching this value as a valid system identity, bypassing
+// OIDC or local user authentication.
+const SystemTokenEnvVar = "TOOLHIVE_SYSTEM_TOKEN"
 
 // bearerTokenType defines the expected token type for Bearer authentication.
 const bearerTokenType = "Bearer"
@@ -61,8 +68,15 @@ func ExtractBearerToken(r *http.Request) (string, error) {
 
 // GetAuthenticationMiddleware returns the appropriate authentication middleware based on the configuration.
 // If OIDC config is provided, it returns JWT middleware. Otherwise, it returns local user middleware.
+//
+// Additionally, it supports System Token authentication if the TOOLHIVE_SYSTEM_TOKEN
+// environment variable is set. This allows bypassing OIDC/local authentication for
+// system components (like health checks) that present the correct Bearer token.
 func GetAuthenticationMiddleware(ctx context.Context, oidcConfig *TokenValidatorConfig,
 ) (func(http.Handler) http.Handler, http.Handler, error) {
+	var baseMiddleware func(http.Handler) http.Handler
+	var authInfoHandler http.Handler
+
 	if oidcConfig != nil {
 		slog.Debug("oidc validation enabled")
 
@@ -72,21 +86,57 @@ func GetAuthenticationMiddleware(ctx context.Context, oidcConfig *TokenValidator
 			return nil, nil, err
 		}
 
-		authInfoHandler := NewAuthInfoHandler(oidcConfig.Issuer, oidcConfig.ResourceURL, oidcConfig.Scopes)
-		return jwtValidator.Middleware, authInfoHandler, nil
+		baseMiddleware = jwtValidator.Middleware
+		authInfoHandler = NewAuthInfoHandler(oidcConfig.Issuer, oidcConfig.ResourceURL, oidcConfig.Scopes)
+	} else {
+		slog.Debug("oidc validation disabled, using local user authentication")
+
+		// Get current OS user
+		currentUser, err := user.Current()
+		if err != nil {
+			slog.Warn("failed to get current user, using 'local' as default", "error", err)
+			baseMiddleware = LocalUserMiddleware("local")
+		} else {
+			slog.Debug("using local user authentication", "user", currentUser.Username)
+			baseMiddleware = LocalUserMiddleware(currentUser.Username)
+		}
 	}
 
-	slog.Debug("oidc validation disabled, using local user authentication")
+	// Check if system token is configured
+	systemToken := os.Getenv(SystemTokenEnvVar)
+	if systemToken != "" {
+		slog.Debug("system token authentication enabled")
 
-	// Get current OS user
-	currentUser, err := user.Current()
-	if err != nil {
-		slog.Warn("failed to get current user, using 'local' as default", "error", err)
-		return LocalUserMiddleware("local"), nil, nil
+		// Wrap the base middleware with system token check
+		systemMiddleware := func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Check for Bearer token match
+				token, err := ExtractBearerToken(r)
+				if err == nil && token == systemToken {
+					// Create system identity
+					identity := &Identity{
+						Subject:   "toolhive-system",
+						TokenType: bearerTokenType,
+						Token:     token,
+					}
+
+					// Inject identity into context
+					ctx := WithIdentity(r.Context(), identity)
+
+					// Bypass base middleware and proceed to next handler
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+
+				// Fall back to base authentication middleware
+				baseMiddleware(next).ServeHTTP(w, r)
+			})
+		}
+
+		return systemMiddleware, authInfoHandler, nil
 	}
 
-	slog.Debug("using local user authentication", "user", currentUser.Username)
-	return LocalUserMiddleware(currentUser.Username), nil, nil
+	return baseMiddleware, authInfoHandler, nil
 }
 
 // EscapeQuotes escapes quotes in a string for use in a quoted-string context.

@@ -201,6 +201,34 @@ func TestBuildEnvVarsForVmcp(t *testing.T) {
 
 	assert.True(t, foundName, "Should have VMCP_NAME env var")
 	assert.True(t, foundNamespace, "Should have VMCP_NAMESPACE env var")
+
+	// Test with SystemTokenRef
+	vmcpWithSystemToken := &mcpv1alpha1.VirtualMCPServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-vmcp-token",
+			Namespace: "test-namespace",
+		},
+		Spec: mcpv1alpha1.VirtualMCPServerSpec{
+			Config: vmcpconfig.Config{Group: "test-group"},
+			OutgoingAuth: &mcpv1alpha1.OutgoingAuthConfig{
+				SystemTokenRef: &mcpv1alpha1.SecretKeyRef{
+					Name: "system-token-secret",
+					Key:  "token",
+				},
+			},
+		},
+	}
+
+	envWithToken := r.buildEnvVarsForVmcp(context.Background(), vmcpWithSystemToken, []workloads.TypedWorkload{})
+	foundToken := false
+	for _, e := range envWithToken {
+		if e.Name == "VMCP_SYSTEM_TOKEN" {
+			foundToken = true
+			assert.Equal(t, "system-token-secret", e.ValueFrom.SecretKeyRef.LocalObjectReference.Name)
+			assert.Equal(t, "token", e.ValueFrom.SecretKeyRef.Key)
+		}
+	}
+	assert.True(t, foundToken, "Should have VMCP_SYSTEM_TOKEN env var")
 }
 
 // TestBuildDeploymentMetadataForVmcp tests deployment metadata generation

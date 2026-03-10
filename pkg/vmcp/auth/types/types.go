@@ -27,16 +27,20 @@ const (
 	// This strategy exchanges an incoming token for a new token to use
 	// when authenticating to the backend service.
 	StrategyTypeTokenExchange = "token_exchange"
+
+	// StrategyTypePassthrough identifies the JWT passthrough strategy.
+	// This strategy forwards the incoming bearer token directly to the backend.
+	StrategyTypePassthrough = "passthrough"
 )
 
 // BackendAuthStrategy defines how to authenticate to a specific backend.
 //
 // This struct provides type-safe configuration for different authentication strategies
-// using HeaderInjection or TokenExchange fields based on the Type field.
+// using HeaderInjection, TokenExchange, or Passthrough fields based on the Type field.
 // +kubebuilder:object:generate=true
 // +gendoc
 type BackendAuthStrategy struct {
-	// Type is the auth strategy: "unauthenticated", "header_injection", "token_exchange"
+	// Type is the auth strategy: "unauthenticated", "header_injection", "token_exchange", "passthrough"
 	Type string `json:"type" yaml:"type"`
 
 	// HeaderInjection contains configuration for header injection auth strategy.
@@ -46,6 +50,20 @@ type BackendAuthStrategy struct {
 	// TokenExchange contains configuration for token exchange auth strategy.
 	// Used when Type = "token_exchange".
 	TokenExchange *TokenExchangeConfig `json:"tokenExchange,omitempty" yaml:"tokenExchange,omitempty"`
+
+	// Passthrough contains configuration for JWT passthrough auth strategy.
+	// Used when Type = "passthrough".
+	Passthrough *PassthroughConfig `json:"passthrough,omitempty" yaml:"passthrough,omitempty"`
+}
+
+// PassthroughConfig configures the JWT passthrough auth strategy.
+// This strategy forwards the incoming bearer token to the backend.
+// +kubebuilder:object:generate=true
+// +gendoc
+type PassthroughConfig struct {
+	// HeaderName is the name of the header to use for the token (default: "Authorization").
+	// +optional
+	HeaderName string `json:"headerName,omitempty" yaml:"headerName,omitempty"`
 }
 
 // HeaderInjectionConfig configures the header injection auth strategy.

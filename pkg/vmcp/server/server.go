@@ -160,6 +160,10 @@ type Config struct {
 	// SessionFactory creates MultiSessions for Phase 2 session management.
 	// Required when SessionManagementV2 is true; ignored otherwise.
 	SessionFactory vmcpsession.MultiSessionFactory
+
+	// SystemToken is a long-lived token used by vMCP for background operations
+	// like health checks when no client token is available.
+	SystemToken string
 }
 
 // Server is the Virtual MCP Server that aggregates multiple backends.
@@ -381,6 +385,8 @@ func New(
 	if cfg.HealthMonitorConfig != nil {
 		// Get initial backends list from registry for health monitoring setup
 		initialBackends := backendRegistry.List(ctx)
+		// Pass system token from config to health monitor
+		cfg.HealthMonitorConfig.SystemToken = cfg.SystemToken
 		healthMon, err = health.NewMonitor(backendClient, initialBackends, *cfg.HealthMonitorConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create health monitor: %w", err)

@@ -32,6 +32,10 @@ const (
 	// The deployment controller mounts secrets as environment variables with this name.
 	//nolint:gosec // This is an environment variable name, not a credential
 	vmcpOIDCClientSecretEnvVar = "VMCP_OIDC_CLIENT_SECRET"
+	// vmcpSystemTokenEnvVar is the environment variable name for the system token.
+	// The deployment controller mounts the system token secret to this environment variable.
+	//nolint:gosec // This is an environment variable name, not a credential
+	vmcpSystemTokenEnvVar = "VMCP_SYSTEM_TOKEN"
 )
 
 // Converter converts VirtualMCPServer CRD specs to vmcp Config
@@ -97,6 +101,9 @@ func (c *Converter) Convert(
 		// Provide default outgoing auth config
 		config.OutgoingAuth = &vmcpconfig.OutgoingAuthConfig{
 			Source: "discovered", // Default to discovered mode
+			Default: &authtypes.BackendAuthStrategy{
+				Type: authtypes.StrategyTypePassthrough,
+			},
 		}
 	}
 
@@ -259,6 +266,12 @@ func (c *Converter) convertOutgoingAuth(
 		Backends: make(map[string]*authtypes.BackendAuthStrategy),
 	}
 
+	// Set SystemTokenEnv if SystemTokenRef is present
+	// The deployment controller mounts this secret to the VMCP_SYSTEM_TOKEN environment variable
+	if vmcp.Spec.OutgoingAuth.SystemTokenRef != nil {
+		outgoing.SystemTokenEnv = vmcpSystemTokenEnvVar
+	}
+
 	// Convert Default
 	if vmcp.Spec.OutgoingAuth.Default != nil {
 		defaultStrategy, err := c.convertBackendAuthConfig(ctx, vmcp, "default", vmcp.Spec.OutgoingAuth.Default)
@@ -287,10 +300,10 @@ func (c *Converter) convertBackendAuthConfig(
 	backendName string,
 	crdConfig *mcpv1alpha1.BackendAuthConfig,
 ) (*authtypes.BackendAuthStrategy, error) {
-	// If type is "discovered", return unauthenticated strategy
+	// If type is "discovered", return passthrough strategy
 	if crdConfig.Type == mcpv1alpha1.BackendAuthTypeDiscovered {
 		return &authtypes.BackendAuthStrategy{
-			Type: authtypes.StrategyTypeUnauthenticated,
+			Type: authtypes.StrategyTypePassthrough,
 		}, nil
 	}
 

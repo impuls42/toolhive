@@ -14,7 +14,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/stacklok/toolhive/pkg/auth"
 	"github.com/stacklok/toolhive/pkg/vmcp"
+	authtypes "github.com/stacklok/toolhive/pkg/vmcp/auth/types"
 )
 
 // healthChecker implements vmcp.HealthChecker using ListCapabilities as the health check.
@@ -29,6 +31,9 @@ type healthChecker struct {
 	// If a health check succeeds but takes longer than this duration, the backend is marked degraded.
 	// Zero means disabled (backends will never be marked degraded based on response time alone).
 	degradedThreshold time.Duration
+
+	// systemToken is an optional token used for authenticating health checks.
+	systemToken string
 }
 
 // NewHealthChecker creates a new health checker that uses BackendClient.ListCapabilities
@@ -39,17 +44,20 @@ type healthChecker struct {
 //   - client: BackendClient for communicating with backend MCP servers
 //   - timeout: Maximum duration for health check operations (0 = no timeout)
 //   - degradedThreshold: Response time threshold for marking backend as degraded (0 = disabled)
+//   - systemToken: Optional token for authenticating health checks
 //
 // Returns a new HealthChecker implementation.
 func NewHealthChecker(
 	client vmcp.BackendClient,
 	timeout time.Duration,
 	degradedThreshold time.Duration,
+	systemToken string,
 ) vmcp.HealthChecker {
 	return &healthChecker{
 		client:            client,
 		timeout:           timeout,
 		degradedThreshold: degradedThreshold,
+		systemToken:       systemToken,
 	}
 }
 
@@ -69,6 +77,30 @@ func (h *healthChecker) CheckHealth(ctx context.Context, target *vmcp.BackendTar
 	// Mark context as health check to bypass authentication logging
 	// Health checks verify backend availability and should not require user credentials
 	healthCheckCtx := WithHealthCheckMarker(ctx)
+
+	// If a system token is configured, inject it as an identity so that
+	// authentication strategies can use it. We also override the auth
+	// strategy to Passthrough to ensure the system token is sent directly
+	// to the backend/proxy without exchange (which would fail for system tokens).
+	if h.systemToken != "" {
+		identity := &auth.Identity{
+			Token:     h.systemToken,
+			TokenType: "Bearer",
+			Subject:   "toolhive-system",
+		}
+		healthCheckCtx = auth.WithIdentity(healthCheckCtx, identity)
+
+		// Create a shallow copy of the target to override auth config
+		// We must not modify the original target as it's shared across requests
+		targetCopy := *target
+		targetCopy.AuthConfig = &authtypes.BackendAuthStrategy{
+			Type: authtypes.StrategyTypePassthrough,
+			Passthrough: &authtypes.PassthroughConfig{
+				HeaderName: "Authorization",
+			},
+		}
+		target = &targetCopy
+	}
 
 	// Apply timeout if configured (after adding health check marker)
 	checkCtx := healthCheckCtx

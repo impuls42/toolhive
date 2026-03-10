@@ -199,6 +199,23 @@ func getStatusReportingInterval(cfg *config.Config) time.Duration {
 	return 0
 }
 
+// resolveSystemToken resolves the system token from environment variable if configured.
+func resolveSystemToken(cfg *config.Config) string {
+	if cfg.OutgoingAuth == nil || cfg.OutgoingAuth.SystemTokenEnv == "" {
+		return ""
+	}
+
+	token := os.Getenv(cfg.OutgoingAuth.SystemTokenEnv)
+	if token == "" {
+		slog.Warn("SystemTokenEnv is configured but environment variable is empty",
+			"env_var", cfg.OutgoingAuth.SystemTokenEnv)
+	} else {
+		slog.Info("resolved system token from environment variable",
+			"env_var", cfg.OutgoingAuth.SystemTokenEnv)
+	}
+	return token
+}
+
 // loadAndValidateConfig loads and validates the vMCP configuration file
 func loadAndValidateConfig(configPath string) (*config.Config, error) {
 	slog.Info(fmt.Sprintf("Loading configuration from: %s", configPath))
@@ -235,10 +252,13 @@ func discoverBackends(
 	ctx context.Context,
 	cfg *config.Config,
 ) ([]vmcp.Backend, vmcp.BackendClient, vmcpauth.OutgoingAuthRegistry, error) {
+	// Resolve system token for outgoing auth fallback
+	systemToken := resolveSystemToken(cfg)
+
 	// Create outgoing authentication registry
 	slog.Info("initializing outgoing authentication")
 	envReader := &env.OSReader{}
-	outgoingRegistry, err := factory.NewOutgoingAuthRegistry(ctx, envReader)
+	outgoingRegistry, err := factory.NewOutgoingAuthRegistry(ctx, envReader, systemToken)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to create outgoing authentication registry: %w", err)
 	}
@@ -522,6 +542,8 @@ func runServe(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to validate optimizer config: %w", err)
 	}
 
+	systemToken := resolveSystemToken(cfg)
+
 	// Create session factory only when SessionManagementV2 is enabled
 	var sessionFactory vmcpsession.MultiSessionFactory
 	if cfg.Operational.SessionManagementV2 {
@@ -548,6 +570,7 @@ func runServe(cmd *cobra.Command, _ []string) error {
 		OptimizerConfig:         optCfg,
 		SessionManagementV2:     cfg.Operational.SessionManagementV2,
 		SessionFactory:          sessionFactory,
+		SystemToken:             systemToken,
 	}
 
 	// Convert composite tool configurations to workflow definitions

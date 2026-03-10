@@ -784,7 +784,7 @@ spec:
                             BackendAuthStrategy defines how to authenticate to a specific backend.
 
                             This struct provides type-safe configuration for different authentication strategies
-                            using HeaderInjection or TokenExchange fields based on the Type field.
+                            using HeaderInjection, TokenExchange, or Passthrough fields based on the Type field.
                           properties:
                             headerInjection:
                               description: |-
@@ -808,6 +808,16 @@ spec:
                                   type: string
                               required:
                               - headerName
+                              type: object
+                            passthrough:
+                              description: |-
+                                Passthrough contains configuration for JWT passthrough auth strategy.
+                                Used when Type = "passthrough".
+                              properties:
+                                headerName:
+                                  description: 'HeaderName is the name of the header
+                                    to use for the token (default: "Authorization").'
+                                  type: string
                               type: object
                             tokenExchange:
                               description: |-
@@ -851,7 +861,7 @@ spec:
                               type: object
                             type:
                               description: 'Type is the auth strategy: "unauthenticated",
-                                "header_injection", "token_exchange"'
+                                "header_injection", "token_exchange", "passthrough"'
                               type: string
                           required:
                           - type
@@ -884,6 +894,16 @@ spec:
                                 type: string
                             required:
                             - headerName
+                            type: object
+                          passthrough:
+                            description: |-
+                              Passthrough contains configuration for JWT passthrough auth strategy.
+                              Used when Type = "passthrough".
+                            properties:
+                              headerName:
+                                description: 'HeaderName is the name of the header
+                                  to use for the token (default: "Authorization").'
+                                type: string
                             type: object
                           tokenExchange:
                             description: |-
@@ -927,7 +947,7 @@ spec:
                             type: object
                           type:
                             description: 'Type is the auth strategy: "unauthenticated",
-                              "header_injection", "token_exchange"'
+                              "header_injection", "token_exchange", "passthrough"'
                             type: string
                         required:
                         - type
@@ -937,6 +957,12 @@ spec:
                           Source defines how to discover backend auth: "inline", "discovered"
                           - inline: Explicit configuration in OutgoingAuth
                           - discovered: Auto-discover from backend MCPServer.externalAuthConfigRef (Kubernetes only)
+                        type: string
+                      systemTokenEnv:
+                        description: |-
+                          SystemTokenEnv is the name of the environment variable containing a long-lived
+                          token used by vMCP for background operations like health checks when no client
+                          token is available. The actual token value is resolved at runtime.
                         type: string
                     required:
                     - source
@@ -1413,6 +1439,22 @@ spec:
                     - discovered
                     - inline
                     type: string
+                  systemTokenRef:
+                    description: |-
+                      SystemTokenRef references a Kubernetes Secret containing a long-lived
+                      token used by vMCP for background operations like health checks when no
+                      client token is available. The secret must be in the same namespace.
+                    properties:
+                      key:
+                        description: Key is the key within the secret
+                        type: string
+                      name:
+                        description: Name is the name of the secret
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
                 type: object
               podTemplateSpec:
                 description: |-

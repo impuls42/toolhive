@@ -144,7 +144,7 @@ func NewVMCPServer(
 	}
 
 	// Create outgoing auth registry with all strategies registered
-	outgoingRegistry, err := factory.NewOutgoingAuthRegistry(ctx, &env.OSReader{})
+	outgoingRegistry, err := factory.NewOutgoingAuthRegistry(ctx, &env.OSReader{}, "")
 	require.NoError(tb, err)
 
 	// Create backend client

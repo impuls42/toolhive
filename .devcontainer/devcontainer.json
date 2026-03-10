@@ -1,0 +1,39 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/go .
+{
+  "name": "Go",
+  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "image": "mcr.microsoft.com/devcontainers/go:2-1.25-trixie",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "sst-dev.opencode",
+        "golang.go"
+      ]
+    }
+  },
+  // Features to add to the dev container. More info: https://containers.dev/features.
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "dockerDashComposeVersion": "v2",
+      "moby": false,
+      "disableIp6tables": true
+    },
+    "ghcr.io/impuls42/devcontainer-features/openchamber:latest": {}
+  },
+  "mounts": [
+    {
+      "source": "${localWorkspaceFolder}/.opencode/auth.json",
+      "target": "/mnt/opencode-auth.json",
+      "type": "bind"
+    }
+  ]
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // "forwardPorts": [],
+  // Use 'postCreateCommand' to run commands after the container is created.
+  // "postCreateCommand": "go version",
+  // Configure tool-specific properties.
+  // "customizations": {},
+  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  // "remoteUser": "root"
+}

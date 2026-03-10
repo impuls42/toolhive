@@ -70,9 +70,27 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `type` _string_ | Type is the auth strategy: "unauthenticated", "header_injection", "token_exchange" |  |  |
+| `type` _string_ | Type is the auth strategy: "unauthenticated", "header_injection", "token_exchange", "passthrough" |  |  |
 | `headerInjection` _[auth.types.HeaderInjectionConfig](#authtypesheaderinjectionconfig)_ | HeaderInjection contains configuration for header injection auth strategy.<br />Used when Type = "header_injection". |  |  |
 | `tokenExchange` _[auth.types.TokenExchangeConfig](#authtypestokenexchangeconfig)_ | TokenExchange contains configuration for token exchange auth strategy.<br />Used when Type = "token_exchange". |  |  |
+| `passthrough` _[auth.types.PassthroughConfig](#authtypespassthroughconfig)_ | Passthrough contains configuration for JWT passthrough auth strategy.<br />Used when Type = "passthrough". |  |  |
+
+
+#### auth.types.PassthroughConfig
+
+
+
+PassthroughConfig configures the JWT passthrough auth strategy.
+This strategy forwards the incoming bearer token to the backend.
+
+
+
+_Appears in:_
+- [auth.types.BackendAuthStrategy](#authtypesbackendauthstrategy)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `headerName` _string_ | HeaderName is the name of the header to use for the token (default: "Authorization"). |  | Optional: \{\} <br /> |
 
 
 #### auth.types.HeaderInjectionConfig
@@ -430,6 +448,7 @@ _Appears in:_
 | `source` _string_ | Source defines how to discover backend auth: "inline", "discovered"<br />- inline: Explicit configuration in OutgoingAuth<br />- discovered: Auto-discover from backend MCPServer.externalAuthConfigRef (Kubernetes only) |  |  |
 | `default` _[auth.types.BackendAuthStrategy](#authtypesbackendauthstrategy)_ | Default is the default auth strategy for backends without explicit config. |  |  |
 | `backends` _object (keys:string, values:[auth.types.BackendAuthStrategy](#authtypesbackendauthstrategy))_ | Backends contains per-backend auth configuration. |  |  |
+| `systemTokenEnv` _string_ | SystemTokenEnv is the name of the environment variable containing a long-lived<br />token used by vMCP for background operations like health checks when no client<br />token is available. The actual token value is resolved at runtime. |  | Optional: \{\} <br /> |
 
 
 #### vmcp.config.OutputConfig

@@ -124,6 +124,12 @@ type OutgoingAuthConfig struct {
 	// Works in all modes (discovered, inline)
 	// +optional
 	Backends map[string]BackendAuthConfig `json:"backends,omitempty"`
+
+	// SystemTokenRef references a Kubernetes Secret containing a long-lived
+	// token used by vMCP for background operations like health checks when no
+	// client token is available. The secret must be in the same namespace.
+	// +optional
+	SystemTokenRef *SecretKeyRef `json:"systemTokenRef,omitempty"`
 }
 
 // BackendAuthConfig defines authentication configuration for a backend MCPServer

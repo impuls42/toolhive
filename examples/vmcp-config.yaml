@@ -134,7 +134,7 @@ operational:
     unhealthyThreshold: 3  # Mark unhealthy after N failures
 
     # Partial failures
-    partialFailureMode: fail  # fail | bestEffort
+    partialFailureMode: fail  # fail | best_effort
 
     # Circuit breaker
     circuitBreaker:

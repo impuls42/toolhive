@@ -22,16 +22,17 @@ func TestNewOutgoingAuthRegistry(t *testing.T) {
 
 		ctx := context.Background()
 		envReader := &env.OSReader{}
-		registry, err := NewOutgoingAuthRegistry(ctx, envReader)
+		registry, err := NewOutgoingAuthRegistry(ctx, envReader, "")
 
 		require.NoError(t, err)
 		require.NotNil(t, registry)
 
-		// Verify all three strategies are registered
+		// Verify all four strategies are registered
 		strategyTypes := []string{
 			authtypes.StrategyTypeUnauthenticated,
 			authtypes.StrategyTypeHeaderInjection,
 			authtypes.StrategyTypeTokenExchange,
+			authtypes.StrategyTypePassthrough,
 		}
 
 		for _, strategyType := range strategyTypes {
@@ -46,7 +47,7 @@ func TestNewOutgoingAuthRegistry(t *testing.T) {
 
 		ctx := context.Background()
 		envReader := &env.OSReader{}
-		registry, err := NewOutgoingAuthRegistry(ctx, envReader)
+		registry, err := NewOutgoingAuthRegistry(ctx, envReader, "")
 
 		require.NoError(t, err)
 		require.NotNil(t, registry)
@@ -62,7 +63,7 @@ func TestNewOutgoingAuthRegistry(t *testing.T) {
 
 		ctx := context.Background()
 		envReader := &env.OSReader{}
-		registry, err := NewOutgoingAuthRegistry(ctx, envReader)
+		registry, err := NewOutgoingAuthRegistry(ctx, envReader, "")
 
 		require.NoError(t, err)
 		require.NotNil(t, registry)
@@ -104,7 +105,7 @@ func TestNewOutgoingAuthRegistry(t *testing.T) {
 
 		ctx := context.Background()
 		envReader := &env.OSReader{}
-		registry, err := NewOutgoingAuthRegistry(ctx, envReader)
+		registry, err := NewOutgoingAuthRegistry(ctx, envReader, "")
 
 		require.NoError(t, err)
 		require.NotNil(t, registry)
@@ -123,7 +124,7 @@ func TestNewOutgoingAuthRegistry(t *testing.T) {
 
 		ctx := context.Background()
 		envReader := &env.OSReader{}
-		registry, err := NewOutgoingAuthRegistry(ctx, envReader)
+		registry, err := NewOutgoingAuthRegistry(ctx, envReader, "")
 
 		require.NoError(t, err)
 		require.NotNil(t, registry)
@@ -144,12 +145,32 @@ func TestNewOutgoingAuthRegistry(t *testing.T) {
 		assert.NoError(t, err, "unauthenticated strategy should accept empty strategy")
 	})
 
+	t.Run("passthrough strategy with system token", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		envReader := &env.OSReader{}
+		systemToken := "test-system-token"
+		registry, err := NewOutgoingAuthRegistry(ctx, envReader, systemToken)
+
+		require.NoError(t, err)
+		require.NotNil(t, registry)
+
+		// Get passthrough strategy
+		strategy, err := registry.GetStrategy(authtypes.StrategyTypePassthrough)
+		require.NoError(t, err)
+		require.NotNil(t, strategy)
+
+		// Verify it's the correct type
+		assert.Equal(t, authtypes.StrategyTypePassthrough, strategy.Name())
+	})
+
 	t.Run("all strategies have correct names", func(t *testing.T) {
 		t.Parallel()
 
 		ctx := context.Background()
 		envReader := &env.OSReader{}
-		registry, err := NewOutgoingAuthRegistry(ctx, envReader)
+		registry, err := NewOutgoingAuthRegistry(ctx, envReader, "")
 
 		require.NoError(t, err)
 		require.NotNil(t, registry)
@@ -162,6 +183,7 @@ func TestNewOutgoingAuthRegistry(t *testing.T) {
 			{authtypes.StrategyTypeUnauthenticated, "unauthenticated"},
 			{authtypes.StrategyTypeHeaderInjection, "header_injection"},
 			{authtypes.StrategyTypeTokenExchange, "token_exchange"},
+			{authtypes.StrategyTypePassthrough, "passthrough"},
 		}
 
 		for _, tc := range testCases {

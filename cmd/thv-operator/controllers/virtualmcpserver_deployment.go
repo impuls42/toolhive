@@ -277,6 +277,11 @@ func (r *VirtualMCPServerReconciler) buildEnvVarsForVmcp(
 	// Mount outgoing auth secrets
 	env = append(env, r.buildOutgoingAuthEnvVars(ctx, vmcp, typedWorkloads)...)
 
+	// Mount system token secret
+	if systemTokenEnvVar := r.buildSystemTokenEnvVar(vmcp); systemTokenEnvVar != nil {
+		env = append(env, *systemTokenEnvVar)
+	}
+
 	// Note: Other secrets (Redis passwords, service account credentials) may be added here in the future
 	// following the same pattern of mounting from Kubernetes Secrets as environment variables.
 
@@ -323,6 +328,25 @@ func (*VirtualMCPServerReconciler) buildOIDCEnvVars(vmcp *mcpv1alpha1.VirtualMCP
 	}
 
 	return env
+}
+
+// buildSystemTokenEnvVar builds environment variable for system token secret mounting.
+func (*VirtualMCPServerReconciler) buildSystemTokenEnvVar(vmcp *mcpv1alpha1.VirtualMCPServer) *corev1.EnvVar {
+	if vmcp.Spec.OutgoingAuth == nil || vmcp.Spec.OutgoingAuth.SystemTokenRef == nil {
+		return nil
+	}
+
+	return &corev1.EnvVar{
+		Name: "VMCP_SYSTEM_TOKEN",
+		ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: vmcp.Spec.OutgoingAuth.SystemTokenRef.Name,
+				},
+				Key: vmcp.Spec.OutgoingAuth.SystemTokenRef.Key,
+			},
+		},
+	}
 }
 
 // buildOutgoingAuthEnvVars builds environment variables for outgoing auth secrets.

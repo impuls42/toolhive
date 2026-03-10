@@ -124,6 +124,10 @@ type MonitorConfig struct {
 	// CircuitBreaker contains circuit breaker configuration.
 	// nil means circuit breaker is disabled.
 	CircuitBreaker *CircuitBreakerConfig
+
+	// SystemToken is a long-lived token used by vMCP for background operations
+	// like health checks when no client token is available.
+	SystemToken string
 }
 
 // CircuitBreakerConfig contains circuit breaker configuration.
@@ -188,7 +192,7 @@ func NewMonitor(
 	}
 
 	// Create health checker with degraded threshold
-	checker := NewHealthChecker(client, config.Timeout, config.DegradedThreshold)
+	checker := NewHealthChecker(client, config.Timeout, config.DegradedThreshold, config.SystemToken)
 
 	// Create status tracker with circuit breaker configuration
 	// The status tracker will lazily initialize circuit breakers as needed

@@ -37,7 +37,7 @@ func TestHeaderInjectionIntegration(t *testing.T) {
 
 		// Step 1: Create the outgoing auth registry with all strategies
 		envReader := &env.OSReader{}
-		registry, err := NewOutgoingAuthRegistry(ctx, envReader)
+		registry, err := NewOutgoingAuthRegistry(ctx, envReader, "")
 		require.NoError(t, err)
 		require.NotNil(t, registry)
 
@@ -121,7 +121,7 @@ func TestHeaderInjectionIntegration(t *testing.T) {
 
 		// Create registry
 		envReader := &env.OSReader{}
-		registry, err := NewOutgoingAuthRegistry(ctx, envReader)
+		registry, err := NewOutgoingAuthRegistry(ctx, envReader, "")
 		require.NoError(t, err)
 
 		// Create fake client with secret
@@ -233,7 +233,7 @@ func TestHeaderInjectionIntegration(t *testing.T) {
 
 		// Create registry
 		envReader := &env.OSReader{}
-		registry, err := NewOutgoingAuthRegistry(ctx, envReader)
+		registry, err := NewOutgoingAuthRegistry(ctx, envReader, "")
 		require.NoError(t, err)
 
 		// Get strategy

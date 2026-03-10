@@ -51,6 +51,12 @@ func (r *MCPRemoteProxyReconciler) deploymentForMCPRemoteProxy(
 	deploymentTemplateLabels, deploymentTemplateAnnotations := r.buildPodTemplateMetadata(ls, proxy, runConfigChecksum)
 	podSecurityContext, containerSecurityContext := r.buildSecurityContexts(ctx, proxy)
 
+	// Extract ImagePullSecrets from ResourceOverrides if present
+	var imagePullSecrets []corev1.LocalObjectReference
+	if proxy.Spec.ResourceOverrides != nil && proxy.Spec.ResourceOverrides.ProxyDeployment != nil {
+		imagePullSecrets = proxy.Spec.ResourceOverrides.ProxyDeployment.ImagePullSecrets
+	}
+
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        proxy.Name,
@@ -70,6 +76,7 @@ func (r *MCPRemoteProxyReconciler) deploymentForMCPRemoteProxy(
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccountNameForRemoteProxy(proxy),
+					ImagePullSecrets:   imagePullSecrets,
 					Containers: []corev1.Container{{
 						Image:           getToolhiveRunnerImage(),
 						Name:            "toolhive",
@@ -217,12 +224,7 @@ func (r *MCPRemoteProxyReconciler) buildEnvVarsForProxy(
 
 	// Add user-specified environment variables
 	if proxy.Spec.ResourceOverrides != nil && proxy.Spec.ResourceOverrides.ProxyDeployment != nil {
-		for _, envVar := range proxy.Spec.ResourceOverrides.ProxyDeployment.Env {
-			env = append(env, corev1.EnvVar{
-				Name:  envVar.Name,
-				Value: envVar.Value,
-			})
-		}
+		env = append(env, proxy.Spec.ResourceOverrides.ProxyDeployment.Env...)
 	}
 
 	return ctrlutil.EnsureRequiredEnvVars(ctx, env)

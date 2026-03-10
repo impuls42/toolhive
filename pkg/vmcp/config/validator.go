@@ -188,8 +188,9 @@ func (*DefaultValidator) validateBackendAuthStrategy(_ string, strategy *authtyp
 		authtypes.StrategyTypeUnauthenticated,
 		authtypes.StrategyTypeHeaderInjection,
 		authtypes.StrategyTypeTokenExchange,
+		authtypes.StrategyTypePassthrough,
 		// TODO: Add more as strategies are implemented:
-		// "pass_through", "client_credentials", "oauth_proxy",
+		// "client_credentials", "oauth_proxy",
 	}
 	if !contains(validTypes, strategy.Type) {
 		return fmt.Errorf("type must be one of: %s", strings.Join(validTypes, ", "))
@@ -359,7 +360,7 @@ func (*DefaultValidator) validateFailureHandling(fh *FailureHandlingConfig) erro
 		}
 	}
 
-	validModes := []string{"fail", "bestEffort"}
+	validModes := []string{"fail", "best_effort"}
 	if !contains(validModes, fh.PartialFailureMode) {
 		return fmt.Errorf("partialFailureMode must be one of: %s", strings.Join(validModes, ", "))
 	}

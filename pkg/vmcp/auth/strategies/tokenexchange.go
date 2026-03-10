@@ -97,13 +97,14 @@ func (*TokenExchangeStrategy) Name() string {
 func (s *TokenExchangeStrategy) Authenticate(
 	ctx context.Context, req *http.Request, strategy *authtypes.BackendAuthStrategy,
 ) error {
-	// Skip authentication for health checks
-	if health.IsHealthCheck(ctx) {
-		return nil
-	}
-
 	identity, ok := auth.IdentityFromContext(ctx)
 	if !ok {
+		// Skip authentication for health checks if no identity is present.
+		// If a system token is configured, the health monitor will provide an identity
+		// and we will proceed with token exchange using that system identity.
+		if health.IsHealthCheck(ctx) {
+			return nil
+		}
 		return fmt.Errorf("no identity found in context")
 	}
 
